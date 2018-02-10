@@ -2,14 +2,16 @@ package org.fossasia.openevent.data.repository;
 
 import android.text.TextUtils;
 
-import org.fossasia.openevent.OpenEventApp;
 import org.fossasia.openevent.common.arch.FilterableRealmLiveData;
 import org.fossasia.openevent.common.arch.LiveRealmData;
 import org.fossasia.openevent.common.arch.LiveRealmDataObject;
 import org.fossasia.openevent.common.events.BookmarkChangedEvent;
+import org.fossasia.openevent.config.StrategyRegistry;
 import org.fossasia.openevent.core.auth.model.User;
 import org.fossasia.openevent.data.Event;
+import org.fossasia.openevent.data.FAQ;
 import org.fossasia.openevent.data.Microlocation;
+import org.fossasia.openevent.data.Notification;
 import org.fossasia.openevent.data.Session;
 import org.fossasia.openevent.data.SessionType;
 import org.fossasia.openevent.data.Speaker;
@@ -346,7 +348,9 @@ public class RealmDataRepository {
                     .findFirst()
                     .setIsBookmarked(bookmark);
 
-            OpenEventApp.postEventOnUIThread(new BookmarkChangedEvent());
+            StrategyRegistry.getInstance()
+                    .getEventBusStrategy()
+                    .postEventOnUIThread(new BookmarkChangedEvent());
             realm1.commitTransaction();
 
             realm1.close();
@@ -571,6 +575,48 @@ public class RealmDataRepository {
 
     public RealmResults<EventDates> getEventDatesSync(){
         return realm.where(EventDates.class).findAll();
+    }
+    
+    // Notifications section
+
+    public Completable saveNotifications(final List<Notification> notifications) {
+        return Completable.fromAction(() -> {
+            saveNotificationsInRealm(notifications);
+            Timber.d("Saved notifications");
+        });
+    }
+
+    private void saveNotificationsInRealm(List<Notification> notifications) {
+        realm.executeTransaction(realm1 -> {
+            realm1.delete(Notification.class);
+            realm1.insertOrUpdate(notifications);
+        });
+    }
+
+    public RealmResults<Notification> getNotifications() {
+        return realm.where(Notification.class).findAllSortedAsync("receivedAt");
+    }
+
+    // FAQ Section
+    public RealmResults<FAQ> getEventFAQs() {
+        return realm.where(FAQ.class).findAllAsync();
+    }
+
+    public Completable saveFAQs(final List<FAQ> faqs) {
+        return Completable.fromAction(() -> {
+            saveFAQsInRealm(faqs);
+            Timber.d("Saved FAQs");
+        });
+    }
+
+    private void saveFAQsInRealm(List<FAQ> faqs) {
+        Realm realm = Realm.getDefaultInstance();
+        realm.executeTransaction(transaction -> {
+            // Using a threaded instance now to handle relationship with FAQ types in the future.
+            transaction.delete(FAQ.class);
+            transaction.insertOrUpdate(faqs);
+        });
+        realm.close();
     }
 
     /**

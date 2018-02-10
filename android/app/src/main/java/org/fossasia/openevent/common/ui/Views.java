@@ -2,6 +2,7 @@ package org.fossasia.openevent.common.ui;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Color;
@@ -21,11 +22,18 @@ import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EdgeEffect;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.amulyakhare.textdrawable.TextDrawable;
+
 import org.fossasia.openevent.R;
+import org.fossasia.openevent.common.ConstantStrings;
+import org.fossasia.openevent.data.Session;
+import org.fossasia.openevent.data.Track;
+import org.fossasia.openevent.data.repository.RealmDataRepository;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -35,8 +43,17 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
 
 public final class Views {
 
+    private static TextDrawable.IShapeBuilder textDrawableBuilder;
+
     private Views() {
         throw new UnsupportedOperationException();
+    }
+
+    public static TextDrawable.IShapeBuilder getTextDrawableBuilder() {
+        if (textDrawableBuilder == null) {
+            textDrawableBuilder = TextDrawable.builder();
+        }
+        return textDrawableBuilder;
     }
 
     @TargetApi(JELLY_BEAN)
@@ -122,7 +139,7 @@ public final class Views {
         CharSequence converted = fromHtml(html);
 
         if (TextUtils.isEmpty(converted)) {
-            if(hide) textView.setVisibility(View.GONE);
+            if (hide) textView.setVisibility(View.GONE);
         } else {
             textView.setVisibility(View.VISIBLE);
             textView.setText(converted);
@@ -200,5 +217,32 @@ public final class Views {
 
     public static int getAccentColor(final Context context) {
         return ContextCompat.getColor(context, R.color.color_accent);
+    }
+
+    public static void hideKeyboard(Context context, View view) {
+        if (view != null) {
+            InputMethodManager manager = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
+            view.clearFocus();
+            if (manager != null) {
+                manager.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            }
+        }
+    }
+
+    public static Intent openSessionDetails(Session session, Intent intent) {
+        Track track = session.getTrack();
+        if (!RealmDataRepository.isNull(track)) {
+            final String sessionName = session.getTitle();
+            String trackName = track.getName();
+            intent.putExtra(ConstantStrings.SESSION, sessionName);
+            intent.putExtra(ConstantStrings.TRACK, trackName);
+            intent.putExtra(ConstantStrings.ID, session.getId());
+            intent.putExtra(ConstantStrings.TRACK_ID, track.getId());
+        } else {
+            final String sessionName = session.getTitle();
+            intent.putExtra(ConstantStrings.SESSION, sessionName);
+            intent.putExtra(ConstantStrings.ID, session.getId());
+        }
+        return intent;
     }
 }

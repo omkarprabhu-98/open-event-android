@@ -32,21 +32,22 @@ import com.squareup.otto.Subscribe;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
-import org.fossasia.openevent.OpenEventApp;
 import org.fossasia.openevent.R;
-import org.fossasia.openevent.common.ui.base.BaseActivity;
-import org.fossasia.openevent.core.track.session.SessionsListAdapter;
 import org.fossasia.openevent.common.api.Urls;
-import org.fossasia.openevent.data.Session;
-import org.fossasia.openevent.data.Speaker;
 import org.fossasia.openevent.common.events.ConnectionCheckEvent;
-import org.fossasia.openevent.core.bookmark.BookmarkStatus;
-import org.fossasia.openevent.core.bookmark.OnBookmarkSelectedListener;
 import org.fossasia.openevent.common.ui.SnackbarUtil;
+import org.fossasia.openevent.common.ui.Views;
+import org.fossasia.openevent.common.ui.base.BaseActivity;
+import org.fossasia.openevent.common.ui.image.ZoomableImageUtil;
 import org.fossasia.openevent.common.utils.StringUtils;
 import org.fossasia.openevent.common.utils.Utils;
-import org.fossasia.openevent.common.ui.Views;
-import org.fossasia.openevent.common.ui.image.ZoomableImageUtil;
+import org.fossasia.openevent.config.StrategyRegistry;
+import org.fossasia.openevent.core.bookmark.BookmarkStatus;
+import org.fossasia.openevent.core.bookmark.OnBookmarkSelectedListener;
+import org.fossasia.openevent.core.track.session.SessionDetailActivity;
+import org.fossasia.openevent.core.track.session.SessionsListAdapter;
+import org.fossasia.openevent.data.Session;
+import org.fossasia.openevent.data.Speaker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +55,7 @@ import java.util.List;
 import butterknife.BindView;
 import butterknife.OnClick;
 
-public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout.OnOffsetChangedListener, OnBookmarkSelectedListener {
+public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout.OnOffsetChangedListener, OnBookmarkSelectedListener, SessionsListAdapter.OnItemClickListener {
 
     private SessionsListAdapter sessionsListAdapter;
 
@@ -146,6 +147,7 @@ public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout
 
         sessionsListAdapter = new SessionsListAdapter(this, sessions, spearkerWiseSessionList);
         sessionsListAdapter.setOnBookmarkSelectedListener(this);
+        sessionsListAdapter.setHandleItemClickListener(this);
         sessionRecyclerView.setNestedScrollingEnabled(false);
         sessionRecyclerView.setAdapter(sessionsListAdapter);
         sessionRecyclerView.setItemAnimator(new DefaultItemAnimator());
@@ -288,7 +290,7 @@ public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout
     protected void onResume() {
         super.onResume();
 
-        OpenEventApp.getEventBus().register(this);
+        StrategyRegistry.getInstance().getEventBusStrategy().getEventBus().register(this);
 
         DisplayMetrics displayMetrics = this.getResources().getDisplayMetrics();
         float width = displayMetrics.widthPixels / displayMetrics.density;
@@ -305,7 +307,7 @@ public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout
     @Override
     protected void onPause() {
         super.onPause();
-        OpenEventApp.getEventBus().unregister(this);
+        StrategyRegistry.getInstance().getEventBusStrategy().getEventBus().unregister(this);
     }
 
     @Override
@@ -398,6 +400,7 @@ public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout
     protected void onDestroy() {
         super.onDestroy();
         sessionsListAdapter.clearOnBookmarkSelectedListener();
+        sessionsListAdapter.clearHandleItemClickListener();
     }
 
     @OnClick(R.id.speaker_image)
@@ -412,4 +415,11 @@ public class SpeakerDetailsActivity extends BaseActivity implements AppBarLayout
         SnackbarUtil.setSnackbarAction(this, snackbar, bookmarkStatus)
                 .show();
     }
+
+    @Override
+    public void itemOnClick(Session session, int layoutPosition) {
+        Intent intent = new Intent(this, SessionDetailActivity.class);
+        startActivity(Views.openSessionDetails(session, intent));
+    }
+
 }

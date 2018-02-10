@@ -1,8 +1,8 @@
 package org.fossasia.openevent.core.location;
 
 import android.app.Dialog;
-
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -27,17 +27,19 @@ import android.widget.TextView;
 
 import com.amulyakhare.textdrawable.TextDrawable;
 
-import org.fossasia.openevent.OpenEventApp;
 import org.fossasia.openevent.R;
-import org.fossasia.openevent.common.ui.base.BaseActivity;
-import org.fossasia.openevent.core.track.session.SessionsListAdapter;
-import org.fossasia.openevent.data.Session;
-import org.fossasia.openevent.core.bookmark.BookmarkStatus;
-import org.fossasia.openevent.core.bookmark.OnBookmarkSelectedListener;
 import org.fossasia.openevent.common.ConstantStrings;
 import org.fossasia.openevent.common.date.DateConverter;
 import org.fossasia.openevent.common.ui.SnackbarUtil;
+import org.fossasia.openevent.common.ui.Views;
+import org.fossasia.openevent.common.ui.base.BaseActivity;
 import org.fossasia.openevent.common.utils.Utils;
+import org.fossasia.openevent.config.StrategyRegistry;
+import org.fossasia.openevent.core.bookmark.BookmarkStatus;
+import org.fossasia.openevent.core.bookmark.OnBookmarkSelectedListener;
+import org.fossasia.openevent.core.track.session.SessionDetailActivity;
+import org.fossasia.openevent.core.track.session.SessionsListAdapter;
+import org.fossasia.openevent.data.Session;
 import org.threeten.bp.ZonedDateTime;
 
 import java.util.ArrayList;
@@ -45,7 +47,7 @@ import java.util.List;
 
 import butterknife.BindView;
 
-public class LocationActivity extends BaseActivity implements SearchView.OnQueryTextListener, OnBookmarkSelectedListener {
+public class LocationActivity extends BaseActivity implements SearchView.OnQueryTextListener, OnBookmarkSelectedListener, SessionsListAdapter.OnItemClickListener {
     final private String SEARCH = "searchText";
 
     private SessionsListAdapter sessionsListAdapter;
@@ -72,6 +74,7 @@ public class LocationActivity extends BaseActivity implements SearchView.OnQuery
     private ImageView trackImageIcon;
 
     private String location;
+    private int listPosition;
 
     private String searchText = "";
 
@@ -117,9 +120,10 @@ public class LocationActivity extends BaseActivity implements SearchView.OnQuery
         gridLayoutManager = new GridLayoutManager(this, spanCount);
         sessionRecyclerView.setLayoutManager(gridLayoutManager);
         sessionsListAdapter = new SessionsListAdapter(this, sessions, locationWiseSessionList);
+        sessionsListAdapter.setHandleItemClickListener(this);
         sessionsListAdapter.setOnBookmarkSelectedListener(this);
         sessionRecyclerView.setAdapter(sessionsListAdapter);
-        sessionRecyclerView.scrollToPosition(SessionsListAdapter.listPosition);
+        sessionRecyclerView.scrollToPosition(listPosition);
         sessionRecyclerView.setItemAnimator(new DefaultItemAnimator());
 
         loadData();
@@ -233,7 +237,7 @@ public class LocationActivity extends BaseActivity implements SearchView.OnQuery
                 bundle.putBoolean(ConstantStrings.IS_MAP_FRAGMENT_FROM_MAIN_ACTIVITY, false);
                 bundle.putString(ConstantStrings.LOCATION_NAME, location);
 
-                Fragment mapFragment = ((OpenEventApp) getApplication())
+                Fragment mapFragment = StrategyRegistry.getInstance().getMapModuleStrategy()
                         .getMapModuleFactory()
                         .provideMapModule()
                         .provideMapFragment();
@@ -270,6 +274,7 @@ public class LocationActivity extends BaseActivity implements SearchView.OnQuery
     protected void onDestroy() {
         super.onDestroy();
         sessionsListAdapter.clearOnBookmarkSelectedListener();
+        sessionsListAdapter.clearHandleItemClickListener();
     }
 
     @Override
@@ -295,5 +300,12 @@ public class LocationActivity extends BaseActivity implements SearchView.OnQuery
         SnackbarUtil.setSnackbarAction(this, snackbar, bookmarkStatus)
                 .show();
     }
-  
+
+    @Override
+    public void itemOnClick(Session session, int layoutPosition) {
+        listPosition = layoutPosition;
+        Intent intent = new Intent(this, SessionDetailActivity.class);
+        startActivity(Views.openSessionDetails(session, intent));
+    }
+
 }
